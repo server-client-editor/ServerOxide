@@ -1,0 +1,2 @@
+# ServerOxide
+A Rust server.
