@@ -1,0 +1,8 @@
+[package]
+name = "ServerOxide"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.45.0", features = ["full"] }
+warp = { version = "0.3.7", features = ["tls"] }
