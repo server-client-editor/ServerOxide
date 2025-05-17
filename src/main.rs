@@ -1,11 +1,12 @@
 use anyhow::{Result, anyhow};
-use argon2::PasswordHasher;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use captcha_rs::CaptchaBuilder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use chrono::Utc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::trace;
 use uuid::Uuid;
@@ -21,7 +22,8 @@ struct User {
 struct LoginRequest {
     username: String,
     password: String,
-    captcha: String,
+    captcha_id: String,
+    captcha_answer: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -30,12 +32,76 @@ struct CaptchaResponse {
     image_base64: String,
 }
 
-async fn login_handler(body: LoginRequest) -> Result<impl warp::Reply, warp::Rejection> {
-    trace!("login_handler: {:?}", body);
-    Ok(warp::reply::json(
-        &serde_json::json!({"token": "fake-jwt-token"}),
-    ))
+// region login
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    sub: String,
+    exp: u64,
 }
+
+async fn verify_password(user_store: UserStore, username: &str, password: &str) -> bool {
+    let mut map = user_store.read().await;
+    if let Some(User{hashed_password: stored_hash, .. }) = map.get(&username.to_string()) {
+        let parsed_hash = PasswordHash::new(stored_hash);
+        return match parsed_hash {
+            Ok(hash) => Argon2::default().verify_password(password.as_bytes(), &hash).is_ok(),
+            Err(_) => false,
+        }
+    }
+    false
+}
+
+async fn generate_jwt(username: &str) -> Result<String> {
+    let expiration = Utc::now()
+        .checked_add_signed(chrono::Duration::hours(1))
+        .expect("valid timestamp")
+        .timestamp() as u64;
+
+    let claims = Claims {
+        sub: username.to_string(),
+        exp: expiration
+    };
+
+    let secret = std::env::var("CAPTCHA_SECRET").unwrap_or_else(|_| "my_secret".into());
+
+    jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes())
+    ).map_err(|e| anyhow!(e.to_string()))
+}
+
+async fn login_handler(body: LoginRequest, captcha_store: CaptchaStore, user_store: UserStore) -> Result<impl warp::Reply, warp::Rejection> {
+    trace!("login_handler: {:?}", body);
+
+    if !verify_captcha(captcha_store, body.captcha_id, body.captcha_answer).await {
+        return Ok(warp::reply::json(&serde_json::json!({
+            "status": "error",
+            "error": "invalid captcha"
+        })));
+    }
+
+    if !verify_password(user_store, &body.username, &body.password).await {
+        return Ok(warp::reply::json(&serde_json::json!({
+            "status": "error",
+            "error": "invalid username or password"
+        })))
+    }
+
+    if let Ok(jwt) = generate_jwt(&body.username).await {
+        Ok(warp::reply::json(
+            &serde_json::json!({"token": jwt}),
+        ))
+    } else {
+        Ok(warp::reply::json(&serde_json::json!({
+            "status": "error",
+            "error": "internal server error"
+        })))
+    }
+}
+
+// endregion
 
 //region signup
 
@@ -184,6 +250,8 @@ async fn main() {
         .and(warp::path("login"))
         .and(warp::path::end())
         .and(warp::body::json())
+        .and(with_captcha_store(captcha_store.clone()))
+        .and(with_user_store(user_store.clone()))
         .and_then(login_handler);
 
     let signup = warp::post()
