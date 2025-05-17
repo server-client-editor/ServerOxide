@@ -49,8 +49,8 @@ struct SignupRequest {
 
 async fn signup_handler(
     body: SignupRequest,
-    users: Arc<RwLock<HashMap<String, User>>>,
     captcha_store: CaptchaStore,
+    user_store: UserStore,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     trace!("signup_handler: {:?}", body);
 
@@ -78,7 +78,7 @@ async fn signup_handler(
         }
     };
 
-    let mut map = users.write().await;
+    let mut map = user_store.write().await;
     if map.contains_key(&body.username) {
         return Ok(warp::reply::json(&serde_json::json!({
             "status": "error",
@@ -166,6 +166,7 @@ async fn verify_captcha(store: CaptchaStore, id: String, answer: String) -> bool
 
 // endregion
 
+type UserStore = Arc<RwLock<HashMap<String, User>>>;
 type CaptchaStore = Arc<Mutex<HashMap<String, String>>>;
 
 #[tokio::main]
@@ -174,9 +175,7 @@ async fn main() {
         .with_env_filter("warp=off,ServerOxide=trace")
         .init();
 
-    let users: Arc<RwLock<HashMap<String, User>>> = Arc::new(RwLock::new(HashMap::new()));
-    let user_filter = warp::any().map(move || users.clone());
-
+    let user_store: UserStore = Arc::new(RwLock::new(HashMap::new()));
     let captcha_store: CaptchaStore = Arc::new(Mutex::new(HashMap::new()));
 
     let hello = warp::path::end().map(|| "Hello, HTTPS!\n");
@@ -191,8 +190,8 @@ async fn main() {
         .and(warp::path("signup"))
         .and(warp::path::end())
         .and(warp::body::json())
-        .and(user_filter)
         .and(with_captcha_store(captcha_store.clone()))
+        .and(with_user_store(user_store.clone()))
         .and_then(signup_handler);
 
     let captcha = warp::get()
@@ -212,6 +211,12 @@ async fn main() {
         .key_path(key_path)
         .run(([127, 0, 0, 1], 8443))
         .await;
+}
+
+fn with_user_store(
+    store: UserStore,
+) -> impl Filter<Extract = (UserStore,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || store.clone())
 }
 
 fn with_captcha_store(
