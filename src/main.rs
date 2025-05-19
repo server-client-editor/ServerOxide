@@ -1,3 +1,4 @@
+use futures_util::sink::SinkExt;
 use anyhow::{Result, anyhow};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::SaltString;
@@ -7,10 +8,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use chrono::Utc;
+use jsonwebtoken::{DecodingKey, Validation};
 use tokio::sync::{Mutex, RwLock};
-use tracing::trace;
+use tracing::{trace, warn};
 use uuid::Uuid;
-use warp::Filter;
+use warp::{http, Filter, Rejection};
+use warp::ws::Message;
 
 #[derive(Debug)]
 struct User {
@@ -271,7 +274,16 @@ async fn main() {
     let cert_path = "cert/cert.pem";
     let key_path = "cert/key.pem";
 
-    let routes = hello.or(login).or(signup).or(captcha);
+    let chat = warp::get()
+        .and(warp::path("chat"))
+        .and(warp::path::end())
+        .and(with_auth())
+        .and(warp::ws())
+        .map(|username: String, ws: warp::ws::Ws| {
+            ws.on_upgrade(|socket| user_connected(socket, username))
+        });
+
+    let routes = hello.or(login).or(signup).or(captcha).or(chat);
 
     warp::serve(routes)
         .tls()
@@ -279,6 +291,12 @@ async fn main() {
         .key_path(key_path)
         .run(([127, 0, 0, 1], 8443))
         .await;
+}
+
+async fn user_connected(mut socket: warp::ws::WebSocket, username: String) {
+    let greeting = format!("Hello {}!", username);
+    let _ = socket.send(Message::text(greeting)).await;
+    let _ = socket.close();
 }
 
 fn with_user_store(
@@ -291,4 +309,33 @@ fn with_captcha_store(
     store: CaptchaStore,
 ) -> impl Filter<Extract = (CaptchaStore,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || store.clone())
+}
+
+fn with_auth() -> impl Filter<Extract = (String,), Error = Rejection> + Clone {
+    warp::header::<String>(http::header::AUTHORIZATION.as_ref()).and_then(|auth: String| async move {
+        if let Some(token) = auth.strip_prefix("Bearer ") {
+            trace!("auth token: {}", token);
+
+            let secret = std::env::var("CAPTCHA_SECRET").unwrap_or_else(|_| "my_secret".into());
+            let token_data = jsonwebtoken::decode::<Claims>(
+                token,
+                &DecodingKey::from_secret(secret.as_bytes()),
+                &Validation::default(),
+            );
+
+            return match token_data {
+                Ok(data) => {
+                    trace!("token decoded successfully");
+                    Ok(data.claims.sub.clone())
+                }
+                Err(e) => {
+                    warn!("token decode error: {}", e);
+                    Err(warp::reject())
+                }
+            }
+        } else {
+            warn!("auth failed");
+            Err(warp::reject())
+        }
+    })
 }
