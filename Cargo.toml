@@ -8,6 +8,7 @@ anyhow = { version = "1.0.98" }
 argon2 = { version = "0.6.0-pre.1" }
 captcha-rs = { version = "0.2.11" }
 chrono = { version = "0.4.41" }
+clap = { version = "4.5.39", features = ["derive"] }
 config = { version = "0.15.11" }
 futures-util = { version = "0.3.31" }
 jsonwebtoken = { version = "9.3.1" }
