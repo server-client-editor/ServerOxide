@@ -17,8 +17,8 @@ use warp::ws::Message;
 
 #[derive(Debug)]
 struct User {
-    username: String,
     hashed_password: String,
+    connection: Option<tokio::sync::mpsc::UnboundedSender<Message>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -158,8 +158,8 @@ async fn signup_handler(
     map.insert(
         body.username.clone(),
         User {
-            username: body.username,
             hashed_password: hashed,
+            connection: None,
         },
     );
 
