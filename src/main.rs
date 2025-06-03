@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use chrono::Utc;
+use futures_util::StreamExt;
 use jsonwebtoken::{DecodingKey, Validation};
 use tokio::sync::{Mutex, RwLock};
-use tracing::{trace, warn};
+use tracing::{info, trace, warn};
 use uuid::Uuid;
 use warp::{http, Filter, Rejection};
 use warp::ws::Message;
@@ -279,8 +280,9 @@ async fn main() {
         .and(warp::path::end())
         .and(with_auth())
         .and(warp::ws())
-        .map(|username: String, ws: warp::ws::Ws| {
-            ws.on_upgrade(|socket| user_connected(socket, username))
+        .and(with_user_store(user_store.clone()))  // Avoid unnecessary clone
+        .map(|username: String, ws: warp::ws::Ws, user_store: UserStore| {
+            ws.on_upgrade(|socket| user_connected(socket, username, user_store))
         });
 
     let routes = hello.or(login).or(signup).or(captcha).or(chat);
@@ -293,10 +295,54 @@ async fn main() {
         .await;
 }
 
-async fn user_connected(mut socket: warp::ws::WebSocket, username: String) {
-    let greeting = format!("Hello {}!", username);
-    let _ = socket.send(Message::text(greeting)).await;
-    let _ = socket.close();
+async fn user_connected(mut socket: warp::ws::WebSocket, username: String, user_store: UserStore) {
+    trace!("user connected: {}", username);
+
+    let (mut to_user, mut from_user) = socket.split();
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
+
+    if let Some(user) = user_store.write().await.get_mut(&username) {
+        user.connection = Some(tx);
+    }
+
+    let to_user_handle = tokio::task::spawn(async move {
+        while let Some(message) = rx.recv().await {
+            trace!("sending websocket message: {:?}", message);
+            if let Err(e) = to_user.send(message).await {
+                warn!("failed to send websocket message: {:?}", e);
+                break;
+            }
+        }
+    });
+
+    let username_clone = username.clone();
+    let user_store_clone = user_store.clone();
+    let from_user_handle = tokio::task::spawn(async move {
+        while let Some(result) = from_user.next().await {
+            trace!("websocket received: {:?}", result);
+            if let Ok(message) = result {
+                let message = format!("<{}>: {}", username_clone, message.to_str().unwrap_or_default());
+                for User{connection: conn, .. } in user_store_clone.read().await.values() {
+                    if let Some(tx) = conn {
+                        trace!("sending websocket message to: {:?}", username_clone);
+                        if let Err(e) = tx.send(Message::text(message.clone())) {
+                            info!("user disconnected: {}", username_clone);
+                        }
+                    } else {
+                        trace!("user offline: {}", username_clone);
+                    }
+                }
+            } else {
+                warn!("websocket received error: {:?}", result);
+                break;
+            }
+        }
+    });
+
+    let _ = tokio::try_join!(to_user_handle, from_user_handle);
+
+    user_store.write().await.get_mut(&username).unwrap().connection = None;
+    trace!("user disconnected: {}", username);
 }
 
 fn with_user_store(
