@@ -18,8 +18,13 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path("v1"))
         .and(api::v1::routes());
     
+    let address: std::net::SocketAddr = project_settings.http.address.parse()?;
+    
     warp::serve(api_v1)
-        .run(([127, 0, 0, 1], 8443))
+        .tls()
+        .cert_path(project_settings.http.cert_path.clone())
+        .key_path(project_settings.http.key_path.clone())
+        .run(address)
         .await;
 
     Ok(())

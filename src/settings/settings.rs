@@ -4,7 +4,15 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
+    pub http: Http,
     pub log: Log,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Http {
+    pub cert_path: String,
+    pub key_path: String,
+    pub address: String,
 }
 
 #[derive(Debug, Deserialize)]
