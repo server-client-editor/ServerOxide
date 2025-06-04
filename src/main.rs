@@ -242,7 +242,7 @@ type CaptchaStore = Arc<Mutex<HashMap<String, String>>>;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_env_filter("warp=off,ServerOxide=trace")
+        .with_env_filter("warp=off,server_oxide=trace")
         .init();
 
     let user_store: UserStore = Arc::new(RwLock::new(HashMap::new()));

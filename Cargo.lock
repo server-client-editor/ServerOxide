@@ -3,27 +3,6 @@
 version = 4
 
 [[package]]
-name = "ServerOxide"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "argon2",
- "captcha-rs",
- "chrono",
- "clap",
- "config",
- "futures-util",
- "jsonwebtoken",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "warp",
-]
-
-[[package]]
 name = "ab_glyph_rasterizer"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1863,6 +1842,27 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "server_oxide"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "captcha-rs",
+ "chrono",
+ "clap",
+ "config",
+ "futures-util",
+ "jsonwebtoken",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "warp",
 ]
 
 [[package]]

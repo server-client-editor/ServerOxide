@@ -1,5 +1,5 @@
-use ServerOxide::logger::*;
-use ServerOxide::settings::*;
+use server_oxide::logger::*;
+use server_oxide::settings::*;
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();

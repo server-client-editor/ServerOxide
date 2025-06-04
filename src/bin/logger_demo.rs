@@ -1,4 +1,4 @@
-use ServerOxide::logger::*;
+use server_oxide::logger::*;
 
 fn main() -> anyhow::Result<()> {
     let logger = Logger::new_bootstrap();

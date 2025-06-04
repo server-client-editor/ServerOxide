@@ -1,4 +1,4 @@
-use ServerOxide::settings::*;
+use server_oxide::settings::*;
 
 fn main() {
     // Load settings from the default location
