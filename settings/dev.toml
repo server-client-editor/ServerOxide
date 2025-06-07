@@ -1,3 +1,6 @@
+[captcha]
+backend = "fake"
+
 [http]
 cert_path = "certs/dev_cert.pem"
 key_path = "certs/dev_key.pem"

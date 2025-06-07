@@ -4,8 +4,14 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
+    pub captcha: Captcha,
     pub http: Http,
     pub log: Log,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Captcha {
+    pub backend: String,  // "fake" or "redis"
 }
 
 #[derive(Debug, Deserialize)]
