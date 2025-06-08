@@ -1,3 +1,6 @@
+[auth]
+backend = "fake"
+
 [captcha]
 backend = "fake"
 
