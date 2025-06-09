@@ -25,8 +25,6 @@ impl CaptchaService for FakeCaptchaService {
         })
     }
 
-    /// TODO: This method is currently **untested**.
-    /// Remove this note once it is used and tested in AuthService.
     async fn validate(&self, input: ValidationInput) -> anyhow::Result<(), CaptchaError> {
         match input.answer.as_str() {
             "123456" => Ok(()),

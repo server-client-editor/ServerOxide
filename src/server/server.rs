@@ -1,9 +1,11 @@
 use std::sync::Arc;
+use crate::auth::*;
 use crate::captcha::*;
 use crate::logger::*;
 use crate::settings::Settings;
 
 pub struct Server {
+    pub auth_service: Arc<dyn AuthService>,
     pub captcha_service: Arc<dyn CaptchaService>,
 }
 
@@ -15,7 +17,14 @@ impl Server {
         };
         debug!(?captcha_service);
 
+        let auth_service = match settings.auth.backend.as_str() {
+            "fake" => Arc::new(FakeAuthService::new()),
+            other => return Err(anyhow::anyhow!("Unknown auth backend: {}", other)),
+        };
+        debug!(?auth_service);
+
         Ok(Self{
+            auth_service,
             captcha_service,
         })
     }

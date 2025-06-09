@@ -15,12 +15,16 @@ pub fn routes(server: Server) -> impl Filter<Extract = (impl warp::Reply,), Erro
         .and(warp::path("login"))
         .and(warp::path::end())
         .and(warp::body::json())
+        .and(with(server.auth_service.clone()))
+        .and(with(server.captcha_service.clone()))
         .and_then(handler::login);
 
     let signup = warp::post()
         .and(warp::path("signup"))
         .and(warp::path::end())
         .and(warp::body::json())
+        .and(with(server.auth_service.clone()))
+        .and(with(server.captcha_service.clone()))
         .and_then(handler::signup);
 
     let chat = warp::get()
