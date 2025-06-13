@@ -3,12 +3,14 @@ use crate::auth::*;
 use crate::captcha::*;
 use crate::chat::*;
 use crate::logger::*;
+use crate::user::*;
 use crate::settings::Settings;
 
 pub struct Server {
     pub auth_service: Arc<dyn AuthService>,
     pub captcha_service: Arc<dyn CaptchaService>,
     pub chat_service: Arc<dyn ChatService>,
+    pub user_service: Arc<dyn UserService>,
 }
 
 impl Server {
@@ -25,8 +27,14 @@ impl Server {
         };
         debug!(?auth_service);
 
+        let user_service = match settings.user.backend.as_str() {
+            "fake" => Arc::new(FakeUserService::new()),
+            other => return Err(anyhow::anyhow!("Unknown user backend: {}", other)),
+        };
+        debug!(?user_service);
+
         let chat_service = match settings.chat.backend.as_str() {
-            "fake" => Arc::new(FakeChatService::new()),
+            "fake" => Arc::new(FakeChatService::new(user_service.clone())),
             other => return Err(anyhow::anyhow!("Unknown chat backend: {}", other)),
         };
         debug!(?chat_service);
@@ -35,6 +43,7 @@ impl Server {
             auth_service,
             captcha_service,
             chat_service,
+            user_service,
         })
     }
 }

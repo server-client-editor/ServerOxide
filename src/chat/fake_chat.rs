@@ -6,6 +6,7 @@ use futures_util::{SinkExt, StreamExt};
 use crate::auth::UserId;
 use super::chat::*;
 use crate::logger::*;
+use crate::user::*;
 use futures_util::stream::{SplitSink, SplitStream};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
@@ -26,6 +27,7 @@ impl Debug for FakeChatService {
 }
 
 pub struct FakeChatService {
+    user_service: Arc<dyn UserService>,
     online_users: Arc<DashMap<UserId, ClientRecord>>,
     to_dispatcher: UnboundedSender<Message>,
     dispatcher_handle: JoinHandle<()>,
@@ -42,12 +44,13 @@ fn new_dispatcher(mut from_receiver: UnboundedReceiver<Message>, online_users: A
 }
 
 impl FakeChatService {
-    pub fn new() -> Self {
+    pub fn new(user_service: Arc<dyn UserService>) -> Self {
         let (to_dispatcher, from_receiver) = unbounded_channel();
         let online_users = Arc::new(DashMap::new());
         let dispatcher_handle = new_dispatcher(from_receiver, online_users.clone());
 
         Self {
+            user_service,
             online_users,
             to_dispatcher,
             dispatcher_handle

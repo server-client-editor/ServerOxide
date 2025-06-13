@@ -5,5 +5,6 @@ pub mod settings;
 pub mod auth;
 pub mod captcha;
 pub mod chat;
+pub mod user;
 
 pub mod server;
