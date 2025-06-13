@@ -9,6 +9,7 @@ pub struct Settings {
     pub chat: Chat,
     pub http: Http,
     pub log: Log,
+    pub user: User,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +37,11 @@ pub struct Http {
 #[derive(Debug, Deserialize)]
 pub struct Log {
     pub filter: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct User {
+    pub backend: String,  // "fake" or "real"
 }
 
 #[cfg(debug_assertions)]

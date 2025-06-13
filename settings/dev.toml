@@ -14,3 +14,6 @@ address = "127.0.0.1:8443"
 
 [log]
 filter = "debug"
+
+[user]
+backend = "fake"
