@@ -1,8 +1,10 @@
+use super::error::*;
 use crate::auth::*;
 use crate::captcha::*;
-use super::error::*;
+use crate::logger::*;
+use crate::chat::ChatService;
 use chrono::{DateTime, Utc};
-use futures_util::sink::SinkExt;
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use warp::{self, reject};
@@ -117,8 +119,13 @@ pub async fn signup(
 
     Ok(warp::reply::json(&SignupResponse))
 }
-pub async fn join_chat(mut socket: warp::ws::WebSocket) {
-    let greeting = "Hello from WebSocket!\n".to_string();
-    let _ = socket.send(warp::ws::Message::text(greeting)).await;
-    let _ = socket.close();
+pub async fn join_chat(
+    socket: warp::ws::WebSocket,
+    user_id: UserId,
+    chat_service: Arc<dyn ChatService>,
+) {
+    let (to_user, from_user) = socket.split();
+    if let Err(e) = chat_service.join_chat(to_user, from_user, user_id).await {
+        error!("Error joining chat: {}", e);
+    }
 }
