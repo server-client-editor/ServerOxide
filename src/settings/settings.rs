@@ -6,6 +6,7 @@ use serde::Deserialize;
 pub struct Settings {
     pub auth: Auth,
     pub captcha: Captcha,
+    pub chat: Chat,
     pub http: Http,
     pub log: Log,
 }
@@ -18,6 +19,11 @@ pub struct Auth {
 #[derive(Debug, Deserialize)]
 pub struct Captcha {
     pub backend: String,  // "fake" or "redis"
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Chat {
+    pub backend: String,  // "fake" or "real"
 }
 
 #[derive(Debug, Deserialize)]
