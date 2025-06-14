@@ -1,4 +1,5 @@
 use crate::auth::*;
+use crate::domain::UserId;
 
 #[derive(Debug)]
 pub struct FakeAuthService;

@@ -5,7 +5,8 @@ use crate::chat::ChatService;
 use crate::server::*;
 use std::convert::Infallible;
 use std::sync::Arc;
-use warp::{Filter, http, reject};
+use warp::{http, reject, Filter};
+use crate::domain::UserId;
 
 pub fn routes(
     server: Server,

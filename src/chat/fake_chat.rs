@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
-use crate::auth::UserId;
+use crate::domain::UserId;
 use super::chat::*;
 use crate::logger::*;
 use crate::user::*;

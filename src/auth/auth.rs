@@ -1,5 +1,6 @@
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
+use serde::{Serialize};
 use thiserror::Error;
+use crate::domain::UserId;
 
 #[derive(Debug, Error)]
 pub enum AuthError {
@@ -18,9 +19,6 @@ pub enum AuthError {
     #[error("internal error: {0}")]
     InternalError(#[from] anyhow::Error),
 }
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct UserId(pub uuid::Uuid);
 
 #[derive(Debug, Serialize)]
 pub struct AuthTokens {

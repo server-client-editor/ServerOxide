@@ -8,6 +8,7 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use warp::{self, reject};
+use crate::domain::UserId;
 
 /// TODO: This is currently a God File to help us move fast.
 /// Refactor and tidy up when the feature set is more stable.

@@ -1,8 +1,6 @@
-use crate::auth::UserId;
+use crate::domain::UserId;
 use futures_util::stream::{SplitSink, SplitStream};
 use thiserror::Error;
-use tokio::sync::mpsc::UnboundedSender;
-use tokio::task::JoinHandle;
 use warp::ws::{Message, WebSocket};
 
 #[derive(Debug, Error)]
